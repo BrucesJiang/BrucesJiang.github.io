@@ -20,30 +20,36 @@
     var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="忆往昔之不谏，知来者犹可追">
-<meta property="og:type" content="website">
+  <meta name="description" content="Redis 跳跃表Redis的跳跃表是用来实现有序集合(ZSET)的。  如图所示 图中skiplist并不包含真实的数据元素，而是反映了skiplist的结构关系，其中level0,level1,level2表示层，每层中的元素表示skiplistNode的分值score。 跳跃表定义 12345678910111213&#x2F;&#x2F; 跳跃表&#x2F;** *  Redis的跳跃表用于实现有序集合(ZSET),">
+<meta property="og:type" content="article">
 <meta property="og:title" content="枫的杂货铺">
-<meta property="og:url" content="http://example.com/index.html">
+<meta property="og:url" content="http://example.com/2023/05/21/Redis%E7%9A%84skiplist/index.html">
 <meta property="og:site_name" content="枫的杂货铺">
-<meta property="og:description" content="忆往昔之不谏，知来者犹可追">
+<meta property="og:description" content="Redis 跳跃表Redis的跳跃表是用来实现有序集合(ZSET)的。  如图所示 图中skiplist并不包含真实的数据元素，而是反映了skiplist的结构关系，其中level0,level1,level2表示层，每层中的元素表示skiplistNode的分值score。 跳跃表定义 12345678910111213&#x2F;&#x2F; 跳跃表&#x2F;** *  Redis的跳跃表用于实现有序集合(ZSET),">
 <meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/image/redis/skiplist_01.png">
+<meta property="og:image" content="http://example.com/image/redis/skiplist_02.png">
+<meta property="og:image" content="http://example.com/image/redis/skiplist_03.png">
+<meta property="article:published_time" content="2023-05-21T09:42:41.431Z">
+<meta property="article:modified_time" content="2023-05-21T09:46:23.427Z">
 <meta property="article:author" content="Bruce Jiang">
 <meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/image/redis/skiplist_01.png">
 
-<link rel="canonical" href="http://example.com/">
+<link rel="canonical" href="http://example.com/2023/05/21/Redis%E7%9A%84skiplist/">
 
 
 <script id="page-configurations">
   // https://hexo.io/docs/variables.html
   CONFIG.page = {
     sidebar: "",
-    isHome : true,
-    isPost : false,
+    isHome : false,
+    isPost : true,
     lang   : 'zh-CN'
   };
 </script>
 
-  <title>枫的杂货铺</title>
+  <title> | 枫的杂货铺</title>
   
 
 
@@ -141,9 +147,10 @@
         <div class="content-wrap">
           
 
-          <div class="content index posts-expand">
+          <div class="content post posts-expand">
             
-      
+
+    
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
@@ -159,10 +166,9 @@
       <meta itemprop="name" content="枫的杂货铺">
     </span>
       <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
+        <h1 class="post-title" itemprop="name headline">
           
-            <a href="/2023/05/21/Redis%E7%9A%84skiplist/" class="post-title-link" itemprop="url">未命名</a>
-        </h2>
+        </h1>
 
         <div class="post-meta">
             <span class="post-meta-item">
@@ -186,7 +192,7 @@
     <div class="post-body" itemprop="articleBody">
 
       
-          <h1 id="Redis-跳跃表"><a href="#Redis-跳跃表" class="headerlink" title="Redis 跳跃表"></a>Redis 跳跃表</h1><p>Redis的跳跃表是用来实现有序集合(ZSET)的。 </p>
+        <h1 id="Redis-跳跃表"><a href="#Redis-跳跃表" class="headerlink" title="Redis 跳跃表"></a>Redis 跳跃表</h1><p>Redis的跳跃表是用来实现有序集合(ZSET)的。 </p>
 <p>如图所示<br><img src="/../image/redis/skiplist_01.png" alt="跳跃表"></p>
 <p>图中<code>skiplist</code>并不包含真实的数据元素，而是反映了<code>skiplist</code>的结构关系，其中<code>level0,level1,level2</code>表示层，每层中的元素表示<code>skiplistNode</code>的分值<code>score</code>。</p>
 <p>跳跃表定义</p>
@@ -263,153 +269,30 @@
 <p>针对每一层的调整到这里已经全部完成了，也就是level数组已经搞定，接下来，处理一下backward指针，首先新节点的backward要指向前一个节点，然后，新节点的下一个节点要将backward指向新节点。</p>
 <p>更新skiplist节点数量</p>
 <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 更新跳跃表节点数量</span></span><br><span class="line">zsl-&gt;length++;</span><br></pre></td></tr></table></figure>
-      
     </div>
 
     
     
     
+
       <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/30/%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83II/">
+        
 
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Bruce Jiang">
-      <meta itemprop="description" content="忆往昔之不谏，知来者犹可追">
-    </span>
 
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="枫的杂货铺">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/04/30/%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83II/" class="post-title-link" itemprop="url">流浪地球II</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2023-04-30 16:48:23 / 修改时间：17:03:11" itemprop="dateCreated datePublished" datetime="2023-04-30T16:48:23+08:00">2023-04-30</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>​	2023年2月10日的观影记录——《流浪地球II》。</p>
-<p>​    <img src="/../image/%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83II.png" alt="image-20230430170118830">	</p>
-<p>​	这是一部著作精良，表演精彩，极具想象力且贴近现实，能与世界上的其他作品媲美的科幻电影。它在努力讲述一个关乎全人类，关乎全球命运的故事，而不仅仅是中国的故事，这是一个极大的壮举。3个小时的剧情里面，不能说没有槽点，但是剧情里涵盖了许多让人耐人寻味的细节。这关乎到重要几个角色的选择以及他们所涉及故事明暗线，他们共同构筑了一个宏大的科幻世界观。在本剧中，吴京饰演的刘培强虽然是主人公的角色，但是也仅仅是一个明线的故事推进，几条分支故事线才是构筑这个科幻世界观的点睛之笔。</p>
-<p>​	图恒宇的计划。在进行观影从头到尾对图恒宇的计划都有错误的理解。从情感的角度，能够理解图恒宇将YY的数据上传至550W是为了给女儿完整的一生，却一直无法理解为什么要破坏月球发动机？一旦月球坠落，整个地球都会灭亡，这对他和丫丫有什么好处呢？回答是并没有。整个谜底的揭开其实是在彩蛋中体现的，图恒宇发现了数字空间<code>MOSS</code>的存在后，立即就确定了<code>MOSS</code>才是一系列破坏行动的幕后黑手。整个剧情中其实有很多段暗示：</p>
-<ol>
-<li>数字人的支持者对太空电梯以及联合空间站的攻击。在这期间有一个小小的暗示，那就是550A在通过摄像头观察人类的所有行动—有一处摄像头特写，不停的扫描观察人类的动向</li>
-<li>月球遭遇太阳风暴，月球预警系统失效、突然坏掉的安全扣以及意外被损坏的550C。</li>
-<li>刘培强面试的片段，550w一直通过计算机试的“最优解”逼问刘培强，直至其心态爆炸。但是在刘培强离开时550w仍在观察他。此时图恒宇对着摄像头有一个神秘的微笑，其实这里图恒宇已经开始怀疑550W背后第三方的存在，在帮助数字人计划，但是并未怀疑<code>MOSS</code>的存在</li>
-</ol>
-<p>​	在刘培强的面试期间，图恒宇是经历过心理挣扎的，他湿润的眼圈以及最后神秘的微笑，都坚定了图恒宇上传丫丫数据的信心。</p>
-<p>​	马兆的矛盾。马兆其实是一个矛盾的角色。在他牺牲时，他的一句“没有人文明，毫无意义”，就足矣说明了他只站在人类的一方。但却是数字人计划实实在在的领导者和推动者的角色。丫丫的数据是马兆下令保存下来的，也是马兆破例给了图恒宇550A的权限，才使得图恒宇有机会将丫丫数据上传至550A，并能够有2分钟生命。在谈及数字生命时， 马兆给出了一个十分微妙的回答——“法律层面禁止”， 但是其他方面呢？也就是说，马兆本身时支持这个数字生命计划的。图恒宇将丫丫的数据上传至550W时，马兆看似反对，实则一直在打配合。在阻止图恒宇时，站在门外看表，直到确认图恒宇即将操作完毕时，才命令破门而入。更加让人确认他的矛盾之处在于，在全球网络恢复的行动中，马兆的遗言是一个莫比乌斯环。这就很耐人寻味，莫比乌斯环意味的无穷无尽，也代表着数字人循环进化的人生。他是一个矛盾的人物，既想作为一个科学家看到数字人计划的这项伟大的科研成功的成功，又想作为一个人，不能成为“别人”的“数字宠物”。</p>
-<p>​	周喆直的坚持。周喆直是有人物性格的，让我想起了周总理。那个坐姿，那个人物形象，谈吐以及对人民事业的近乎“盲目”的信任。但是，这种“盲目“的信任实际上是建立在对于当下情况以及”未知来源“提示的判断。这其中其实是有两条线，一个时预知提示，另外一个时时数字生命。人类在努力实施移山计划时，背后一直在”有人“给予预知提示，数字人派的袭击、太空电梯以空间站危机，月球坠落等等时间。其实中间又镜头提示了的，周喆直已经注意到摄像头的”小红点“在观察人类的行动。有一个很微妙的镜头，周喆直收到核武密码时，他丝毫没有感到意外，而是觉得“其实有人在帮我们”，而这个“人”对未来的掌控越来越精确，但是越来越不像“人”。</p>
-<p>​	所以，在影片的结尾毫无意外的引出了<code>MOSS</code>。但是<code>MOSS</code>的出现是好？还是坏？是福是祸？不得而知。但是<code>MOSS</code>制造了月球发动机爆炸事件，但是也给出了人类不得不做出的选择使用全人类的核武器摧毁月球，同时启动地球发动机，促使地球快脱离现有轨道。这种行为，更像是一个上帝视角行为，没有任何感情，只有出题以及解题的唯一且最优解。</p>
-<p>​	我个人觉得这部影片是中国科幻片，乃至世界科幻片史的里程碑，其在我心中的地位完全不逊于美国科幻片《星球大战》系列。但是比之《星球大战》系列极度具有想象力的科幻巨著，《流浪地球II》中的提到的科学技术又让我觉得如此贴近现实，我们完全可以在不久的将来做到这一点，请参见中国提出的南天门计划。</p>
-<p>​	另外让人不得不说的是影片向世人传递的几种中国价值观——以家庭血缘关系为纽带的血缘亲情、为职责和集体利益的杀身成仁以及集体英雄主义，这可能也是影片最温情和最令人催泪的部分，它试图将中国的价值观融入世界。与这种价值观相对，后两种价值观在其他国家比较少见，与之强烈对比的是美国为代表的个人英雄注意以及强调个人权利，自我利益为主的西方价值观。</p>
-
-      
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/04/30/%E6%B5%81%E6%B5%AA%E5%9C%B0%E7%90%83II/" rel="prev" title="流浪地球II">
+      <i class="fa fa-chevron-left"></i> 流浪地球II
+    </a></div>
+      <div class="post-nav-item"></div>
     </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
       </footer>
+    
   </article>
   
   
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
-    <link itemprop="mainEntityOfPage" href="http://example.com/2023/04/30/%E9%9D%A2%E5%9F%BA/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/images/avatar.gif">
-      <meta itemprop="name" content="Bruce Jiang">
-      <meta itemprop="description" content="忆往昔之不谏，知来者犹可追">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="枫的杂货铺">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/04/30/%E9%9D%A2%E5%9F%BA/" class="post-title-link" itemprop="url">面基</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">发表于</span>
-              
-
-              <time title="创建时间：2023-04-30 16:14:07 / 修改时间：16:20:34" itemprop="dateCreated datePublished" datetime="2023-04-30T16:14:07+08:00">2023-04-30</time>
-            </span>
-
-          
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>相逢亦是一种缘分。</p>
-
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-
   
 
 
@@ -462,6 +345,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis-%E8%B7%B3%E8%B7%83%E8%A1%A8"><span class="nav-number">1.</span> <span class="nav-text">Redis 跳跃表</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
