@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 6.3.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"example.com","root":"/","scheme":"Gemini","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":false,"show_result":false,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="Redis 压缩表(ziplist)压缩列表(ziplist)是列表键和哈希键的低层实现之一。当一个列表键只包含数量列表项，并每个列表项要么就是小整数值，要么就是长度比较短的字符串，那么Redis就会使用压缩列表来做列表键的低层实现。 压缩列表结构压缩列表是Redis为了节约内存开发的，是有一系列特殊编码的连续内存块儿组成的顺序型(sequential)数据结构。一个压缩列表可以包含热议多个节点(">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Redis的ziplist">
+<meta property="og:url" content="http://example.com/2023/06/24/Redis%E7%9A%84ziplist/index.html">
+<meta property="og:site_name" content="枫的杂货铺">
+<meta property="og:description" content="Redis 压缩表(ziplist)压缩列表(ziplist)是列表键和哈希键的低层实现之一。当一个列表键只包含数量列表项，并每个列表项要么就是小整数值，要么就是长度比较短的字符串，那么Redis就会使用压缩列表来做列表键的低层实现。 压缩列表结构压缩列表是Redis为了节约内存开发的，是有一系列特殊编码的连续内存块儿组成的顺序型(sequential)数据结构。一个压缩列表可以包含热议多个节点(">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="http://example.com/image/redis/ziplist_components.jpg">
+<meta property="og:image" content="http://example.com/image/redis/ziplist_entry.jpg">
+<meta property="og:image" content="http://example.com/image/redis/cascade_update.jpg">
+<meta property="article:published_time" content="2023-06-24T03:23:37.000Z">
+<meta property="article:modified_time" content="2023-06-24T07:41:54.520Z">
+<meta property="article:author" content="Bruce Jiang">
+<meta property="article:tag" content="Redis">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="http://example.com/image/redis/ziplist_components.jpg">
+
+<link rel="canonical" href="http://example.com/2023/06/24/Redis%E7%9A%84ziplist/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CN'
+  };
+</script>
+
+  <title>Redis的ziplist | 枫的杂货铺</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">枫的杂货铺</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>归档</a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="http://example.com/2023/06/24/Redis%E7%9A%84ziplist/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.gif">
+      <meta itemprop="name" content="Bruce Jiang">
+      <meta itemprop="description" content="忆往昔之不谏，知来者犹可追">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="枫的杂货铺">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Redis的ziplist
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+              
+
+              <time title="创建时间：2023-06-24 11:23:37 / 修改时间：15:41:54" itemprop="dateCreated datePublished" datetime="2023-06-24T11:23:37+08:00">2023-06-24</time>
+            </span>
+
+          
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="Redis-压缩表-ziplist"><a href="#Redis-压缩表-ziplist" class="headerlink" title="Redis 压缩表(ziplist)"></a>Redis 压缩表(ziplist)</h1><p>压缩列表(ziplist)是列表键和哈希键的低层实现之一。当一个列表键只包含数量列表项，并每个列表项要么就是小整数值，要么就是长度比较短的字符串，那么Redis就会使用压缩列表来做列表键的低层实现。</p>
+<h2 id="压缩列表结构"><a href="#压缩列表结构" class="headerlink" title="压缩列表结构"></a>压缩列表结构</h2><p>压缩列表是Redis为了节约内存开发的，是有一系列特殊编码的连续内存块儿组成的顺序型(sequential)数据结构。一个压缩列表可以包含热议多个节点(entry)，每个节点可以保存一个字节数组或者一个整数值。</p>
+<h3 id="压缩列表"><a href="#压缩列表" class="headerlink" title="压缩列表"></a>压缩列表</h3><p>参考源代码实现(ziplist.h&#x2F;zipslist.c)， 压缩列表的各个组成部分：</p>
+<p><img src="/../image/redis/ziplist_components.jpg" alt="ziplist"></p>
+<table>
+<thead>
+<tr>
+<th>字段</th>
+<th>类型</th>
+<th>长度</th>
+<th>用途</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>zlbytes</td>
+<td>uint32_t</td>
+<td>4字节</td>
+<td>记录整个压缩列表占用内存的字节数，在对压缩列表进行内存从新分配或者计算zlend的位置时使用</td>
+</tr>
+<tr>
+<td>zltail</td>
+<td>uint32_t</td>
+<td>4字节</td>
+<td>记录压缩列表尾节点距离压缩列表的起始地址有多少个字节：通过这个偏移量，程序无需便利整个压缩列表就可以确定尾节点的起始地址</td>
+</tr>
+<tr>
+<td>zllen</td>
+<td>uint16_6</td>
+<td>2字节</td>
+<td>记录压缩列表包含的节点数量，当这个属性的值小于UINT16_MAX(65535）时，这个属性的值就是压缩列表包含节点的数量，当这个值等于UINT16_MAX时，节点的真实数量需要便利整个压缩列表才能计算出</td>
+</tr>
+<tr>
+<td>entryX</td>
+<td>列表节点</td>
+<td>不定</td>
+<td>压缩列表包含的各个节点，节点的长度由节点保存的内容决定</td>
+</tr>
+<tr>
+<td>zlend</td>
+<td>uint8_t</td>
+<td>1字节</td>
+<td>特殊值0xFF(十进制255)， 用于标记压缩列表的末端</td>
+</tr>
+</tbody></table>
+<h3 id="压缩列表节点"><a href="#压缩列表节点" class="headerlink" title="压缩列表节点"></a>压缩列表节点</h3><p>每个压缩列表节点可以保存一个字节数组或一个整数值。<br>字节数组可以十以下三种长度的一种：</p>
+<ul>
+<li>长度小于等于64(2^6 - 1) 字节的字节数组</li>
+<li>长度小于等于16383(2^14 - 1) 字节的字节数组</li>
+<li>长度小于4294967295(2^32 - 1）字节的字节数组</li>
+</ul>
+<p>整数值则可以为以下六种长度之一：</p>
+<ul>
+<li>4位长，介于0~12之间的无符号整数</li>
+<li>1字节长的有符号整数</li>
+<li>3字节长的有符号整数</li>
+<li>int16_t 类型整数</li>
+<li>int32_t 类型整数</li>
+<li>int64_t 类型整数</li>
+</ul>
+<p>压缩列表节点组成如下:<br><img src="/../image/redis/ziplist_entry.jpg" alt="ziplist"></p>
+<ul>
+<li>previous_entry_length 节点的previous_entry_length属性以字节位单位，记录了压缩列表中前一个节点的长度。 previous_entry_length属性的长度可以是1字节或5字节.<ul>
+<li>如果前一个节点的长度小于254， 那么previous_entry_length属性的长度为1字节，用于保存前一个节点的长度</li>
+<li>如果前一个节点的长度大于或等于254，那么previous_entry_length属性长度为5字节，其中是属性的第一字节被设置为0xPE(十进制254),而之后的四个字节用于保存前一个节点的长度</li>
+</ul>
+</li>
+<li>encoding 节点的content属性保存数的类型以及长度<ul>
+<li>一字节、两字节或五字节长，值的最高位00、01或10的是字节数组编码，这种编码表示节点的content属性保存的是字节数组、数组的长度由编码除去最高两位之后的其他位记录</li>
+<li>一字节长，值的最高位以11开头的编码是整数编码，这种编码表示节点的content属性保存着整数值，整数值的类型和长度由编码除去最高两位之后的其他位记录</li>
+</ul>
+</li>
+<li>content 保存节点的值，节点值可以位一个字节数组或整数，值的类型和长度由节点的encoding属性决定</li>
+</ul>
+<h2 id="连锁更新"><a href="#连锁更新" class="headerlink" title="连锁更新"></a>连锁更新</h2><p>压缩链表每个节点的previous_entry_length属性都记录了前一个节点的长度：</p>
+<ul>
+<li>前一个节点的长度小于254字节，previous_entry_length属性需要用1个字节长的空间来保存这个长度值</li>
+<li>前一个节点的长度大于等于254字节，previous_entry_length属性需要用5个字节长的空间来保存这个长度值</li>
+</ul>
+<p>假设这种情况，在一个压缩列表中，有多个连续的、长度介于250<del>253字节之间的节点e1\</del>eN</p>
+<p><img src="/../image/redis/cascade_update.jpg" alt="cascade update"></p>
+<p>将一个长度大于等于254字节的新节点new设置为压缩列表的头节点，那么new将变为e1的前置节点。由于e1的previous_entry_length属性仅1个字节长，没有办法保存new的长度，此时会触发压缩列表的空间重分配操作，并将e1节点的previous_entry_length属性从原来的1字节扩展为5字节。此时，由于e1节点的扩充，e2节点previous_entry_length属性无法保存e1节点的长度，继续触发空间重分配，直至eN扩充完毕。 这种特殊情况产生的连续多次空间扩展操作称之为”连锁更新”(cascade update)。 最坏情况下，每次对压缩空间充分配时间复杂度为O(N)， 连锁更新的时间复杂度为O(N^2), N为节点数量。</p>
+<h2 id="压缩列表API"><a href="#压缩列表API" class="headerlink" title="压缩列表API"></a>压缩列表API</h2><p>|函数|功能|时间复杂度|<br>|—|—|—|—|<br>|ziplistNew| 创建一个新的压缩列表| O(1) |<br>|ziplistPush| 创建一个包含指定值的新节点，并将这个节点添加到压缩列表的表头或表尾 | 平均O(N)，最坏O(N) |<br>|ziplistInsert| 将包含给定值的新节点插入到给定节点之后| 平均O(N), 最坏O(N^2) |<br>|ziplistIndex| 返回压缩列表给定索引上的节点 | O(N) |<br>|ziplistFind| 在压缩列表中查找并返回包含了给定值的节点 | O(N*M), N压缩列表节点个数，M为节点字节数组长度|<br>|ziplistNext | 返回给定节点的下一个节点 ｜ O(1) |<br>|ziplistPrev | 返回给定节点的上一个节点 | O(1) |<br>|ziplistGet | 获取给定节点保存的值 | O(1) |<br>|ziplistDelete | 从压缩列表中删除给定的节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistDeleteRange | 删除压缩列表中给定索引上的连续多个节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistBlobLen | 返回压缩列表目前占用的内存字节数 | O(1) |<br>|ziplistLen | 返回压缩列表目前包含的节点数 | 节点数量小于65535时为O(1)， 大于65535时为O(N) |</p>
+<h2 id="核心实现"><a href="#核心实现" class="headerlink" title="核心实现"></a>核心实现</h2>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Redis/" rel="tag"># Redis</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/06/23/SpringBoot%E5%A6%82%E4%BD%95%E5%90%AF%E5%8A%A8/" rel="prev" title="SpringBoot如何启动">
+      <i class="fa fa-chevron-left"></i> SpringBoot如何启动
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Redis-%E5%8E%8B%E7%BC%A9%E8%A1%A8-ziplist"><span class="nav-number">1.</span> <span class="nav-text">Redis 压缩表(ziplist)</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8%E7%BB%93%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">压缩列表结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8"><span class="nav-number">1.1.1.</span> <span class="nav-text">压缩列表</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8%E8%8A%82%E7%82%B9"><span class="nav-number">1.1.2.</span> <span class="nav-text">压缩列表节点</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%9E%E9%94%81%E6%9B%B4%E6%96%B0"><span class="nav-number">1.2.</span> <span class="nav-text">连锁更新</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%8E%8B%E7%BC%A9%E5%88%97%E8%A1%A8API"><span class="nav-number">1.3.</span> <span class="nav-text">压缩列表API</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%A0%B8%E5%BF%83%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.4.</span> <span class="nav-text">核心实现</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+  <p class="site-author-name" itemprop="name">Bruce Jiang</p>
+  <div class="site-description" itemprop="description">忆往昔之不谏，知来者犹可追</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">6</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-tags">
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">标签</span>
+      </div>
+  </nav>
+</div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">Bruce Jiang</span>
+</div>
+  <div class="powered-by">由 <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Gemini</a> 强力驱动
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/pisces.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+</body>
+</html>
