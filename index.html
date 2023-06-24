@@ -300,7 +300,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-23 17:54:17" itemprop="dateModified" datetime="2023-06-23T17:54:17+08:00">2023-06-23</time>
+                <time title="修改时间：2023-06-24 11:08:25" itemprop="dateModified" datetime="2023-06-24T11:08:25+08:00">2023-06-24</time>
               </span>
 
           
@@ -785,7 +785,52 @@
 <li>ziplist（压缩列表）：当哈希类型元素个数小于hash-max-ziplist-entries 配置（默认512个）、同时所有值都小于hash-max-ziplist-value配置（默认64 字节）时，Redis会使用- ziplist作为哈希的内部实现，ziplist使用更加紧凑的 结构实现多个元素的连续存储，所以在节省内存方面比hashtable更加优秀。 </li>
 <li>hashtable（哈希表）：当哈希类型无法满足ziplist的条件时，Redis会使 用hashtable作为哈希的内部实现，因为此时ziplist的读写效率会下降，而 hashtable的读写时间复杂度为O（1）。</li>
 </ul>
-<h3 id="部分应用场景-4"><a href="#部分应用场景-4" class="headerlink" title="部分应用场景"></a>部分应用场景</h3><h1 id="Redis-持久化"><a href="#Redis-持久化" class="headerlink" title="Redis 持久化"></a>Redis 持久化</h1><h1 id="Redis-系统可靠性"><a href="#Redis-系统可靠性" class="headerlink" title="Redis 系统可靠性"></a>Redis 系统可靠性</h1><p>副本策略</p>
+<h3 id="部分应用场景-4"><a href="#部分应用场景-4" class="headerlink" title="部分应用场景"></a>部分应用场景</h3><h3 id="数据结构"><a href="#数据结构" class="headerlink" title="数据结构"></a>数据结构</h3><p><img src="/../image/redis/datastructure.jpg" alt="五种数据结构存储方式"></p>
+<p><img src="/../image/redis/redis%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84.png" alt="Redis数据结构"></p>
+<h1 id="Redis-持久化"><a href="#Redis-持久化" class="headerlink" title="Redis 持久化"></a>Redis 持久化</h1><p>Redis支持RDB和AOF两种持久化机制, 数据持久化能力能够有效避免因进程退出造成的数据丢失问题，当下次重启是利用已经持久化的文件即可实现数据恢复。</p>
+<h2 id="RDB"><a href="#RDB" class="headerlink" title="RDB"></a>RDB</h2><p>将当前进程数据生成快照保存在硬盘的过程。RDB是一个紧凑压缩的二进制文件，代表Redis在某个时间点上的数据快照。</p>
+<p>触发方式</p>
+<ul>
+<li>save 命令 : 阻塞当前Redis服务器，值到RDB过程完成为止，对于内存比较大的实例会造成长时间阻塞，不建议先上使用</li>
+<li>bgsave 命令： Redis进程fork操作创建子进程，Redis持久化过程由子进程负责，完成后自动结束。阻塞只发生在fork阶段。</li>
+</ul>
+<p>自动触发配置：</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">时间策略   save m n m秒内修改n次key，触发rdb</span></span><br><span class="line">save 900 1</span><br><span class="line">save 300 10</span><br><span class="line">save 60 10000</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">文件名称</span></span><br><span class="line">dbfilename dump.rdb</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">文件保存路径</span></span><br><span class="line">dir /home/work/app/redis/data/</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">如果持久化出错，主进程是否停止写入</span></span><br><span class="line">stop-writes-on-bgsave-error yes</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">是否压缩</span></span><br><span class="line">rdbcompression yes</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">导入时是否检查</span></span><br><span class="line">rdbchecksum yes</span><br></pre></td></tr></table></figure>
+
+<p>工作原理<br>Redis的主进程不会做IO操作，会fork一个子进程来完成该操作：</p>
+<ul>
+<li>父进程执行fork操作创建子进程，fork操作过程中父进程会被阻塞，通过 info stats命令查看latest_fork_usec选项，可以获取最近一个fork操作的耗时，单位微妙</li>
+<li>父进程fork完毕后，子进程创建RDB文件，根据父进程内存完成临时快照文件，完成后对原有文件进行替换</li>
+<li>子进程发送信号给父进程表示完成，父进程更新统计信息。</li>
+</ul>
+<p>RDB的优点： </p>
+<ul>
+<li>RDB是一个紧凑压缩的二进制文件，代表Redis在某个时间点上的数据 快照。非常适用于备份，全量复制等场景。比如每6小时执行bgsave备份， 并把RDB文件拷贝到远程机器或者文件系统中（如hdfs），用于灾难恢复。 </li>
+<li>Redis加载RDB恢复数据远远快于AOF的方式。</li>
+</ul>
+<p>RDB的缺点： </p>
+<ul>
+<li>RDB方式数据没办法做到实时持久化&#x2F;秒级持久化。因为bgsave每次运 行都要执行fork操作创建子进程，属于重量级操作，频繁执行成本过高。 </li>
+<li>RDB文件使用特定二进制格式保存，Redis版本演进过程中有多个格式 的RDB版本，存在老版本Redis服务无法兼容新版RDB格式的问题。</li>
+</ul>
+<h2 id="AOF"><a href="#AOF" class="headerlink" title="AOF"></a>AOF</h2><p>AOF（append only file）持久化： 以独立日志的方式记录每次写命令， 重启时再重新执行AOF文件中的命令达到恢复数据的目的。AOF的主要作用是解决了数据持久化的实时性，目前已经是Redis持久化的主流方式。</p>
+<p>AOF配置</p>
+<figure class="highlight shell"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta prompt_"># </span><span class="language-bash">默认不开启aof  而是使用rdb的方式</span></span><br><span class="line">appendonly no</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">默认文件名</span></span><br><span class="line">appendfilename &quot;appendonly.aof&quot;</span><br><span class="line"><span class="meta prompt_"></span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">每次修改都会<span class="built_in">sync</span> 消耗性能</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">appendfsync always</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">每秒执行一次 <span class="built_in">sync</span> 可能会丢失这一秒的数据</span></span><br><span class="line">appendfsync everysec</span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">不执行 <span class="built_in">sync</span> ,这时候操作系统自己同步数据，速度最快</span></span><br><span class="line"><span class="meta prompt_"># </span><span class="language-bash">appendfsync no</span> </span><br></pre></td></tr></table></figure>
+<p>AOF的整个流程大体来看可以分为两步，一步是命令的实时写入（如果是appendfsync everysec 配置，会有1s损耗），第二步是对aof文件的重写。</p>
+<p>AOF文件重写</p>
+<p>随着命令不断写入AOF，文件会越来越大，为了解决这个问题，Redis 引入AOF重写机制压缩文件体积。AOF文件重写是把Redis进程内的数据转 化为写命令同步到新AOF文件的过程</p>
+<p>AOF重写过程可以手动触发和自动触发： </p>
+<ul>
+<li>手动触发：直接调用bgrewriteaof命令。 </li>
+<li>自动触发：根据auto-aof-rewrite-min-size和auto-aof-rewrite-percentage参 数确定自动触发时机。</li>
+</ul>
+<p>参数配置：</p>
+<ul>
+<li>auto-aof-rewrite-min-size：表示运行AOF重写时文件最小体积，默认 为64MB。- auto-aof-rewrite-percentage：代表当前AOF文件空间 （aof_current_size）和上一次重写后AOF文件空间（aof_base_size）的比 值。</li>
+<li>自动触发时机&#x3D;aof_current_size&gt;auto-aof-rewrite-min- size&amp;&amp;（aof_current_size-aof_base_size）&#x2F;aof_base_size&gt;&#x3D;auto-aof-rewrite- percentage </li>
+<li>其中aof_current_size和aof_base_size可以在info Persistence统计信息中查看</li>
+</ul>
+<h1 id="Redis-系统可靠性"><a href="#Redis-系统可靠性" class="headerlink" title="Redis 系统可靠性"></a>Redis 系统可靠性</h1><p>副本策略</p>
 <h1 id="Redis-系统可用性"><a href="#Redis-系统可用性" class="headerlink" title="Redis 系统可用性"></a>Redis 系统可用性</h1><p>哨兵&amp;集群</p>
 <h1 id="Redis-事务"><a href="#Redis-事务" class="headerlink" title="Redis 事务"></a>Redis 事务</h1><p>Redis的安装配置、API、各种高效功能、客户端、持久化、复制、高可用、内存、哨兵、集群、缓存设计等，Redis高可用集群解决方案</p>
 
