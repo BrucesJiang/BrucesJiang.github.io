@@ -172,7 +172,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2023-06-24 11:23:37 / 修改时间：15:49:01" itemprop="dateCreated datePublished" datetime="2023-06-24T11:23:37+08:00">2023-06-24</time>
+              <time title="创建时间：2023-06-24 11:23:37 / 修改时间：15:57:21" itemprop="dateCreated datePublished" datetime="2023-06-24T11:23:37+08:00">2023-06-24</time>
             </span>
 
           
@@ -267,7 +267,7 @@
 <p>假设这种情况，在一个压缩列表中，有多个连续的、长度介于250<del>253字节之间的节点e1\</del>eN</p>
 <p><img src="/../image/redis/cascade_update.jpg" alt="cascade update"></p>
 <p>将一个长度大于等于254字节的新节点new设置为压缩列表的头节点，那么new将变为e1的前置节点。由于e1的previous_entry_length属性仅1个字节长，没有办法保存new的长度，此时会触发压缩列表的空间重分配操作，并将e1节点的previous_entry_length属性从原来的1字节扩展为5字节。此时，由于e1节点的扩充，e2节点previous_entry_length属性无法保存e1节点的长度，继续触发空间重分配，直至eN扩充完毕。 这种特殊情况产生的连续多次空间扩展操作称之为”连锁更新”(cascade update)。 最坏情况下，每次对压缩空间充分配时间复杂度为O(N)， 连锁更新的时间复杂度为O(N^2), N为节点数量。</p>
-<h2 id="压缩列表API"><a href="#压缩列表API" class="headerlink" title="压缩列表API"></a>压缩列表API</h2><p>|函数|功能|时间复杂度|<br>|—|—|—|—|<br>|ziplistNew| 创建一个新的压缩列表| O(1) |<br>|ziplistPush| 创建一个包含指定值的新节点，并将这个节点添加到压缩列表的表头或表尾 | 平均O(N)，最坏O(N) |<br>|ziplistInsert| 将包含给定值的新节点插入到给定节点之后| 平均O(N), 最坏O(N^2) |<br>|ziplistIndex| 返回压缩列表给定索引上的节点 | O(N) |<br>|ziplistFind| 在压缩列表中查找并返回包含了给定值的节点 | O(N*M), N压缩列表节点个数，M为节点字节数组长度|<br>|ziplistNext | 返回给定节点的下一个节点 ｜ O(1) |<br>|ziplistPrev | 返回给定节点的上一个节点 | O(1) |<br>|ziplistGet | 获取给定节点保存的值 | O(1) |<br>|ziplistDelete | 从压缩列表中删除给定的节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistDeleteRange | 删除压缩列表中给定索引上的连续多个节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistBlobLen | 返回压缩列表目前占用的内存字节数 | O(1) |<br>|ziplistLen | 返回压缩列表目前包含的节点数 | 节点数量小于65535时为O(1)， 大于65535时为O(N) |</p>
+<h2 id="压缩列表API"><a href="#压缩列表API" class="headerlink" title="压缩列表API"></a>压缩列表API</h2><p>|函数|功能|时间复杂度|<br>|—|—|—|—|<br>|ziplistNew| 创建一个新的压缩列表| O(1) |<br>|ziplistPush| 创建一个包含指定值的新节点，并将这个节点添加到压缩列表的表头或表尾 | 平均O(N)，最坏O(N) |<br>|ziplistInsert| 将包含给定值的新节点插入到给定节点之后| 平均O(N), 最坏O(N^2) |<br>|ziplistIndex| 返回压缩列表给定索引上的节点 | O(N) |<br>|ziplistFind| 在压缩列表中查找并返回包含了给定值的节点 | O(N*M), N压缩列表节点个数，M为节点字节数组长度|<br>|ziplistNext | 返回给定节点的下一个节点 |O(1) |<br>|ziplistPrev | 返回给定节点的上一个节点 | O(1) |<br>|ziplistGet | 获取给定节点保存的值 | O(1) |<br>|ziplistDelete | 从压缩列表中删除给定的节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistDeleteRange | 删除压缩列表中给定索引上的连续多个节点 | 平均O(N)， 最坏 O(N^2) |<br>|ziplistBlobLen | 返回压缩列表目前占用的内存字节数 | O(1) |<br>|ziplistLen | 返回压缩列表目前包含的节点数 | 节点数量小于65535时为O(1)， 大于65535时为O(N) |</p>
 <h2 id="核心实现"><a href="#核心实现" class="headerlink" title="核心实现"></a>核心实现</h2>
       
     </div>
@@ -1024,7 +1024,7 @@
                   <i class="far fa-calendar-check"></i>
                 </span>
                 <span class="post-meta-item-text">更新于</span>
-                <time title="修改时间：2023-06-08 10:24:34" itemprop="dateModified" datetime="2023-06-08T10:24:34+08:00">2023-06-08</time>
+                <time title="修改时间：2023-06-24 15:56:14" itemprop="dateModified" datetime="2023-06-24T15:56:14+08:00">2023-06-24</time>
               </span>
 
           
