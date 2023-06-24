@@ -172,7 +172,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2023-06-24 16:04:19 / 修改时间：16:05:24" itemprop="dateCreated datePublished" datetime="2023-06-24T16:04:19+08:00">2023-06-24</time>
+              <time title="创建时间：2023-06-24 16:04:19 / 修改时间：16:08:06" itemprop="dateCreated datePublished" datetime="2023-06-24T16:04:19+08:00">2023-06-24</time>
             </span>
 
           
@@ -230,7 +230,7 @@
               <span class="post-meta-item-text">发表于</span>
               
 
-              <time title="创建时间：2023-06-24 11:23:37 / 修改时间：16:05:36" itemprop="dateCreated datePublished" datetime="2023-06-24T11:23:37+08:00">2023-06-24</time>
+              <time title="创建时间：2023-06-24 11:23:37 / 修改时间：16:08:41" itemprop="dateCreated datePublished" datetime="2023-06-24T11:23:37+08:00">2023-06-24</time>
             </span>
 
           
@@ -330,81 +330,68 @@
 <tr>
 <th>函数</th>
 <th>功能</th>
-<th>时间</th>
-<th>复杂度</th>
+<th>时间复杂度</th>
 </tr>
 </thead>
 <tbody><tr>
 <td>ziplistNew</td>
 <td>创建一个新的压缩列表</td>
 <td>O(1)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistPush</td>
 <td>创建一个包含指定值的新节点，并将这个节点添加到压缩列表的表头或表尾</td>
 <td>平均O(N)，最坏O(N)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistInsert</td>
 <td>将包含给定值的新节点插入到给定节点之后</td>
 <td>平均O(N), 最坏O(N^2)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistIndex</td>
 <td>返回压缩列表给定索引上的节点</td>
 <td>O(N)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistFind</td>
 <td>在压缩列表中查找并返回包含了给定值的节点</td>
 <td>O(N*M), N压缩列表节点个数，M为节点字节数组长度</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistNext</td>
 <td>返回给定节点的下一个节点</td>
 <td>O(1)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistPrev</td>
 <td>返回给定节点的上一个节点</td>
 <td>O(1)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistGet</td>
 <td>获取给定节点保存的值</td>
 <td>O(1)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistDelete</td>
 <td>从压缩列表中删除给定的节点</td>
 <td>平均O(N)， 最坏 O(N^2)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistDeleteRange</td>
 <td>删除压缩列表中给定索引上的连续多个节点</td>
 <td>平均O(N)， 最坏 O(N^2)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistBlobLen</td>
 <td>返回压缩列表目前占用的内存字节数</td>
 <td>O(1)</td>
-<td></td>
 </tr>
 <tr>
 <td>ziplistLen</td>
 <td>返回压缩列表目前包含的节点数</td>
 <td>节点数量小于65535时为O(1)， 大于65535时为O(N)</td>
-<td></td>
 </tr>
 </tbody></table>
 <h2 id="核心实现"><a href="#核心实现" class="headerlink" title="核心实现"></a>核心实现</h2>
